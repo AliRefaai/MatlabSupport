@@ -1,0 +1,57 @@
+clc; 
+clear all; 
+format long;
+
+
+snrFso_dB =linspace( 0,40,50);
+snrFso = 10.^(snrFso_dB / 10);
+
+DR = 0.2;
+d = 1000;
+sigma_s = 0.3;
+wz = 2;
+v = sqrt(pi) * DR / (2 * sqrt(2) * wz);
+wz_eq = sqrt((wz^2 * sqrt(pi) * erf(v)) / (2 * v * exp(-v^2)));
+eta = (wz_eq^2) / (2 * (sigma_s)^2);
+
+wi = 9.39507091230114;
+xi = 0.00053929470556;
+s = 50;
+beta = 16.04;
+
+Cn_sqr = 0.5*10^(-14);
+lambda_fso = 1.55*10^(-6);
+k = 2 * pi / lambda_fso;
+sigma_r = sqrt(1.23 * Cn_sqr * k^(7/6) * d^(11/6));
+
+a = 1 ./ ((exp((0.49 .* (sigma_r).^2) ./ ((1 + 1.11 .* (sigma_r).^(12/5)).^(7/6)))) - 1);
+b = 1 ./ ((exp((0.51 .* (sigma_r).^2) ./ ((1 + 0.69 .* (sigma_r).^(12/5)).^(5/6)))) - 1);
+ABER = zeros(1, length(snrFso));
+ber = 0;
+prefactor = (1 / (2 * sqrt(pi)));
+  an=[1];%end
+  bq=[0];%end
+  ap= [1, eta^2 + 1]; %start
+  bm=[eta^2, a, b];%start
+  
+ for i = 1:s
+    % Compute the argument for the Meijer G-function
+    argument = (2 * a * b * xi) ./ (sqrt(snrFso * beta^2));
+
+    % Compute the Meijer G-function
+    %G = MeijerG([ 1, eta^2 + 1], [eta^2, a, b, 0], argument);
+    G = MeijerG( an, ap, bm, bq, argument );
+
+    % Add the term to the BER summation
+    ber = ber(i) + wi * (eta^2 ./ (gamma(a) * gamma(b))) * G;
+    bert = prefactor * ber;
+
+end
+
+% Multiply by the prefactor
+
+    
+semilogy(snrFso_dB, bert, '-b', 'linewidth', 2);
+xlabel('Average SNR [dB]');
+ylabel('ABER');
+% ylim([10^(-6) 1])
